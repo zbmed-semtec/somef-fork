@@ -6,8 +6,6 @@ from .utils import constants, markdown_utils
 from . import extract_ontologies, extract_workflows
 from .process_results import Result
 from chardet import detect
-from cffconvert import Citation
-import json
 
 
 def process_repository_files(repo_dir, metadata_result: Result, repo_type, owner="", repo_name="",
@@ -130,16 +128,11 @@ def process_repository_files(repo_dir, metadata_result: Result, repo_type, owner
                                                                metadata_result, constants.CAT_CITATION,
                                                                constants.FORMAT_BIB)
                 if "CITATION.CFF" == filename.upper():
-                    metadata_result = get_citation_content(repo_type, file_path, owner, repo_name,
-                                                           repo_default_branch,
-                                                           repo_dir, repo_relative_path, filename, dir_path,
-                                                           metadata_result, constants.CAT_CITATION,
-                                                           constants.FORMAT_CFF)
-                    # metadata_result = get_file_content_or_link(repo_type, file_path, owner, repo_name,
-                    #                                            repo_default_branch,
-                    #                                            repo_dir, repo_relative_path, filename, dir_path,
-                    #                                            metadata_result, constants.CAT_CITATION,
-                    #                                            constants.FORMAT_CFF)
+                    metadata_result = get_file_content_or_link(repo_type, file_path, owner, repo_name,
+                                                               repo_default_branch,
+                                                               repo_dir, repo_relative_path, filename, dir_path,
+                                                               metadata_result, constants.CAT_CITATION,
+                                                               constants.FORMAT_CFF)
                 if filename.endswith(".sh"):
                     sh_url = get_file_link(repo_type, file_path, owner, repo_name, repo_default_branch, repo_dir,
                                            repo_relative_path, filename)
@@ -236,70 +229,6 @@ def get_file_link(repo_type, file_path, owner, repo_name, repo_default_branch, r
         return convert_to_raw_user_content_gitlab(file_path, owner, repo_name, repo_default_branch)
     else:
         return os.path.join(repo_dir, repo_relative_path, filename)
-
-
-def get_citation_content(repo_type, file_path, owner, repo_name, repo_default_branch, repo_dir, repo_relative_path,
-                         filename, dir_path, metadata_result: Result, category, format_result=""):
-    """
-    This method will return to the JSON file the contents of the file or its link if it cannot process the contents
-    Parameters
-    ----------
-    repo_type
-    file_path
-    owner
-    repo_name
-    repo_default_branch
-    repo_dir
-    repo_relative_path
-    filename
-    dir_path
-    metadata_result
-    category
-    format_result
-
-    Returns
-    -------
-    @returns String with the file content or url link to the file
-    """
-    url = get_file_link(repo_type, file_path, owner, repo_name, repo_default_branch, repo_dir, repo_relative_path,
-                        filename)
-
-    with open(os.path.join(dir_path, filename), "r") as data_file:
-        file_text = data_file.read()
-        cff = Citation(file_text).as_codemeta()
-        cff_json = json.loads(cff)
-        result = {
-            constants.PROP_VALUE: cff_json['author'],
-            constants.PROP_TYPE: constants.FILE_DUMP
-        }
-        if format_result != "":
-            result[constants.PROP_FORMAT] = format_result
-        metadata_result.add_result(
-            category, result, 1, constants.TECHNIQUE_FILE_EXPLORATION, url)
-    return metadata_result
-
-    # try:
-    #     with open(os.path.join(dir_path, filename), "r") as data_file:
-    #         file_text = data_file.read()
-    #         cff = Citation(file_text)
-    #         cff_json = json.loads(cff)
-    #         with open('cff_test.json', 'w') as outfile:
-    #             json.dump(cff_json, outfile)
-    #         result = {
-    #             constants.PROP_VALUE: file_text,
-    #             constants.PROP_TYPE: constants.FILE_DUMP
-    #         }
-    #         if format_result != "":
-    #             result[constants.PROP_FORMAT] = format_result
-    #         metadata_result.add_result(
-    #             category, result, 1, constants.TECHNIQUE_FILE_EXPLORATION, url)
-    # except:
-    #     metadata_result.add_result(category,
-    #                                {
-    #                                    constants.PROP_VALUE: url,
-    #                                    constants.PROP_TYPE: constants.URL
-    #                                }, 1, constants.TECHNIQUE_FILE_EXPLORATION)
-    # return metadata_result
 
 
 def get_file_content_or_link(repo_type, file_path, owner, repo_name, repo_default_branch, repo_dir, repo_relative_path,

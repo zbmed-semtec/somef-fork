@@ -183,22 +183,21 @@ def check_static_websites(path_repo, repo_metadata: Result):
     js_size = 0
     css_size = 0
     html_file = 0
-    if path_repo:
-        for root, dirs, files in os.walk(path_repo):
-            for file in files:
-                file_path = os.path.join(root, file)
-                if file.endswith(constants.code_extensions) or file.endswith(constants.ontology_extensions) or file.lower() in (('bower.json', 'package.json')):
+    for root, dirs, files in os.walk(path_repo):
+        for file in files:
+            file_path = os.path.join(root, file)
+            if file.endswith(constants.code_extensions) or file.endswith(constants.ontology_extensions) or file.lower() in (('bower.json', 'package.json')):
+                return False
+            elif file.endswith((".js", ".css", ".scss")):
+                web_files += 1
+            elif file.endswith(".html"):
+                html_file += 1
+            elif file.endswith(".ipynb"):
+                if is_notebook_code(file_path):
                     return False
-                elif file.endswith((".js", ".css", ".scss")):
-                    web_files += 1
-                elif file.endswith(".html"):
-                    html_file += 1
-                elif file.endswith(".ipynb"):
-                    if is_notebook_code(file_path):
-                        return False
-                elif file.endswith(".rmd") or file.endswith('.Rmd'):
-                    if has_code_in_rmd(file_path):
-                        return False
+            elif file.endswith(".rmd") or file.endswith('.Rmd'):
+                if has_code_in_rmd(file_path):
+                    return False
     try:
         languages = repo_metadata[constants.CAT_PROGRAMMING_LANGUAGES]
         print(languages)
