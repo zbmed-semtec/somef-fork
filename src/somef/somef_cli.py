@@ -50,7 +50,8 @@ def cli_get_data(threshold, ignore_classifiers, repo_url=None, doc_src=None, loc
             # download files and obtain path to download folder
             if readme_only:
                 # download readme only with the information above
-                readme_text = process_repository.download_readme(owner, repo_name, def_branch, repo_type)
+                readme_text = process_repository.download_readme(
+                    owner, repo_name, def_branch, repo_type)
 
             elif keep_tmp is not None:  # save downloaded files locally
                 os.makedirs(keep_tmp, exist_ok=True)
@@ -61,7 +62,7 @@ def cli_get_data(threshold, ignore_classifiers, repo_url=None, doc_src=None, loc
                                                                                                repo_type, owner,
                                                                                                repo_name,
                                                                                                def_branch)
-                repository_metadata = check_repository_type(local_folder,repo_name,full_repository_metadata) 
+                # repository_metadata = check_repository_type(local_folder,repo_name,full_repository_metadata)
             else:  # Use a temp directory
                 with tempfile.TemporaryDirectory() as temp_dir:
                     local_folder = process_repository.download_repository_files(owner, repo_name, def_branch, repo_type,
@@ -71,9 +72,10 @@ def cli_get_data(threshold, ignore_classifiers, repo_url=None, doc_src=None, loc
                                                                                                    repo_type, owner,
                                                                                                    repo_name,
                                                                                                    def_branch)
-                    repository_metadata = check_repository_type(local_folder,repo_name,full_repository_metadata) 
+                    # repository_metadata = check_repository_type(local_folder,repo_name,full_repository_metadata)
             if readme_text == "":
-                logging.warning("README document does not exist in the target repository")
+                logging.warning(
+                    "README document does not exist in the target repository")
         except process_repository.GithubUrlError:
             logging.error("Error processing the target repository")
             return repository_metadata
@@ -83,7 +85,8 @@ def cli_get_data(threshold, ignore_classifiers, repo_url=None, doc_src=None, loc
                                                                                            repository_metadata,
                                                                                            repo_type)
             if readme_text == "":
-                logging.warning("Warning: README document does not exist in the local repository")
+                logging.warning(
+                    "Warning: README document does not exist in the local repository")
         except process_repository.GithubUrlError:
             logging.error("Error processing the input repository")
             return repository_metadata
@@ -95,15 +98,19 @@ def cli_get_data(threshold, ignore_classifiers, repo_url=None, doc_src=None, loc
             readme_text = doc_fh.read()
     try:
         unfiltered_text = readme_text
-        repository_metadata, string_list = header_analysis.extract_categories(unfiltered_text, repository_metadata)
+        repository_metadata, string_list = header_analysis.extract_categories(
+            unfiltered_text, repository_metadata)
         readme_text = markdown_utils.unmark(readme_text)
         if not ignore_classifiers and unfiltered_text != '':
             repository_metadata = supervised_classification.run_category_classification(unfiltered_text, threshold,
                                                                                         repository_metadata)
             excerpts = create_excerpts.create_excerpts(string_list)
-            excerpts_headers = mardown_parser.extract_text_excerpts_header(unfiltered_text)
-            header_parents = mardown_parser.extract_headers_parents(unfiltered_text)
-            score_dict = supervised_classification.run_classifiers(excerpts, file_paths)
+            excerpts_headers = mardown_parser.extract_text_excerpts_header(
+                unfiltered_text)
+            header_parents = mardown_parser.extract_headers_parents(
+                unfiltered_text)
+            score_dict = supervised_classification.run_classifiers(
+                excerpts, file_paths)
             repository_metadata = supervised_classification.classify(score_dict, threshold, excerpts_headers,
                                                                      header_parents, repository_metadata)
         if readme_text != "":
@@ -112,10 +119,12 @@ def cli_get_data(threshold, ignore_classifiers, repo_url=None, doc_src=None, loc
                 readme_source = readme_source[constants.PROP_RESULT][constants.PROP_VALUE]
             except:
                 readme_source = "README.md"
-            repository_metadata = regular_expressions.extract_bibtex(unfiltered_text, repository_metadata, readme_source)
+            repository_metadata = regular_expressions.extract_bibtex(
+                unfiltered_text, repository_metadata, readme_source)
             repository_metadata = regular_expressions.extract_doi_badges(unfiltered_text, repository_metadata,
                                                                          readme_source)
-            repository_metadata = regular_expressions.extract_title(unfiltered_text, repository_metadata, readme_source)
+            repository_metadata = regular_expressions.extract_title(
+                unfiltered_text, repository_metadata, readme_source)
             repository_metadata = regular_expressions.extract_binder_links(unfiltered_text, repository_metadata,
                                                                            readme_source)
             repository_metadata = regular_expressions.extract_readthedocs(unfiltered_text, repository_metadata,
@@ -131,11 +140,11 @@ def cli_get_data(threshold, ignore_classifiers, repo_url=None, doc_src=None, loc
                                                                                     readme_source)
             repository_metadata = regular_expressions.extract_images(unfiltered_text, repo_url, local_repo,
                                                                      repository_metadata, readme_source, def_branch)
-            repository_metadata = regular_expressions.extract_arxiv_links(unfiltered_text,repository_metadata,readme_source)
+            repository_metadata = regular_expressions.extract_arxiv_links(
+                unfiltered_text, repository_metadata, readme_source)
             logging.info("Completed extracting regular expressions")
 
         return repository_metadata
-
 
     except Exception as e:
         logging.error("Error processing repository " + str(e))
@@ -168,7 +177,8 @@ def run_cli(*,
     # check if it is a valid url
     if repo_url:
         if not validators.url(repo_url):
-            logging.error("Not a valid repository url. Please check the url provided")
+            logging.error(
+                "Not a valid repository url. Please check the url provided")
             return None
     multiple_repos = in_file is not None
     if multiple_repos:
@@ -182,7 +192,8 @@ def run_cli(*,
         remove_urls = []
         for repo_elem in repo_set:
             if not validators.url(repo_elem):
-                logging.error("Not a valid repository url. Please check the url provided: " + repo_elem)
+                logging.error(
+                    "Not a valid repository url. Please check the url provided: " + repo_elem)
                 remove_urls.append(repo_elem)
         # remove non valid urls in repo_set
         for remove_url in remove_urls:
@@ -206,7 +217,8 @@ def run_cli(*,
                                      doc_src=doc_src, keep_tmp=keep_tmp)
 
     if output is not None:
-        json_export.save_json_output(repo_data.results, output, missing, pretty=pretty)
+        json_export.save_json_output(
+            repo_data.results, output, missing, pretty=pretty)
 
     if graph_out is not None:
         logging.info("Generating triples...")
@@ -220,4 +232,5 @@ def run_cli(*,
         data_graph.export_to_file(graph_out, graph_format)
 
     if codemeta_out is not None:
-        json_export.save_codemeta_output(repo_data.results, codemeta_out, pretty=pretty)
+        json_export.save_codemeta_output(
+            repo_data.results, codemeta_out, pretty=pretty)

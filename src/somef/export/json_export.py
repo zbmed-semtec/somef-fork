@@ -73,7 +73,8 @@ def save_codemeta_output(repo_data, outfile, pretty=False):
     if descriptions is not None:
         descriptions.sort(key=lambda x: (x[constants.PROP_CONFIDENCE] + (1 if x[constants.PROP_TECHNIQUE] == constants.GITHUB_API else 0)),
                           reverse=True)
-        descriptions_text = [x[constants.PROP_RESULT][constants.PROP_VALUE] for x in descriptions]
+        descriptions_text = [x[constants.PROP_RESULT]
+                             [constants.PROP_VALUE] for x in descriptions]
 
     codemeta_output = {
         "@context": "https://doi.org/10.5063/schema/codemeta-2.0",
@@ -86,7 +87,7 @@ def save_codemeta_output(repo_data, outfile, pretty=False):
             if constants.PROP_NAME in l[constants.PROP_RESULT].keys():
                 l_result["name"] = l[constants.PROP_RESULT][constants.PROP_NAME]
             if "url" not in l_result.keys() and constants.PROP_URL in l[constants.PROP_RESULT].keys():
-                    l_result["url"] = l[constants.PROP_RESULT][constants.PROP_URL]
+                l_result["url"] = l[constants.PROP_RESULT][constants.PROP_URL]
             # We get the first license we find from the repo
             elif l[constants.PROP_TECHNIQUE] == constants.TECHNIQUE_FILE_EXPLORATION \
                     and constants.PROP_SOURCE in l.keys() and "api.github.com" in l_result["url"]:
@@ -96,9 +97,11 @@ def save_codemeta_output(repo_data, outfile, pretty=False):
         codemeta_output["codeRepository"] = code_repository
         codemeta_output["issueTracker"] = code_repository + "/issues"
     if constants.CAT_DATE_CREATED in repo_data:
-        codemeta_output["dateCreated"] = format_date(repo_data[constants.CAT_DATE_CREATED][0][constants.PROP_RESULT][constants.PROP_VALUE])
+        codemeta_output["dateCreated"] = format_date(
+            repo_data[constants.CAT_DATE_CREATED][0][constants.PROP_RESULT][constants.PROP_VALUE])
     if constants.CAT_DATE_UPDATED in repo_data:
-        codemeta_output["dateModified"] = format_date(repo_data[constants.CAT_DATE_UPDATED][0][constants.PROP_RESULT][constants.PROP_VALUE])
+        codemeta_output["dateModified"] = format_date(
+            repo_data[constants.CAT_DATE_UPDATED][0][constants.PROP_RESULT][constants.PROP_VALUE])
     if constants.CAT_DOWNLOAD_URL in repo_data:
         codemeta_output["downloadUrl"] = repo_data[constants.CAT_DOWNLOAD_URL][0][constants.PROP_RESULT][constants.PROP_VALUE]
     if constants.CAT_NAME in repo_data:
@@ -108,23 +111,27 @@ def save_codemeta_output(repo_data, outfile, pretty=False):
     if constants.CAT_KEYWORDS in repo_data:
         codemeta_output["keywords"] = repo_data[constants.CAT_KEYWORDS][0][constants.PROP_RESULT][constants.PROP_VALUE]
     if constants.CAT_PROGRAMMING_LANGUAGES in repo_data:
-        codemeta_output["programmingLanguage"] = [x[constants.PROP_RESULT][constants.PROP_VALUE] for x in repo_data[constants.CAT_PROGRAMMING_LANGUAGES]]
+        codemeta_output["programmingLanguage"] = [x[constants.PROP_RESULT][constants.PROP_VALUE]
+                                                  for x in repo_data[constants.CAT_PROGRAMMING_LANGUAGES]]
     if constants.CAT_REQUIREMENTS in repo_data:
-        codemeta_output["softwareRequirements"] = [x[constants.PROP_RESULT][constants.PROP_VALUE] for x in repo_data[constants.CAT_REQUIREMENTS]]
+        codemeta_output["softwareRequirements"] = [x[constants.PROP_RESULT]
+                                                   [constants.PROP_VALUE] for x in repo_data[constants.CAT_REQUIREMENTS]]
     install_links = []
     if constants.CAT_INSTALLATION in repo_data:
         for inst in repo_data[constants.CAT_INSTALLATION]:
             if inst[constants.PROP_TECHNIQUE] == constants.TECHNIQUE_HEADER_ANALYSIS and constants.PROP_SOURCE in inst.keys():
                 install_links.append(inst[constants.PROP_SOURCE])
             elif inst[constants.PROP_TECHNIQUE] == constants.TECHNIQUE_FILE_EXPLORATION:
-                install_links.append(inst[constants.PROP_RESULT][constants.PROP_VALUE])
+                install_links.append(
+                    inst[constants.PROP_RESULT][constants.PROP_VALUE])
     if constants.CAT_DOCUMENTATION in repo_data:
         for inst in repo_data[constants.CAT_DOCUMENTATION]:
             if inst[constants.PROP_TECHNIQUE] == constants.TECHNIQUE_HEADER_ANALYSIS and constants.PROP_SOURCE in inst.keys():
                 install_links.append(inst[constants.PROP_SOURCE])
             elif inst[constants.PROP_TECHNIQUE] == constants.TECHNIQUE_FILE_EXPLORATION or \
                     inst[constants.PROP_TECHNIQUE] == constants.TECHNIQUE_REGULAR_EXPRESSION:
-                install_links.append(inst[constants.PROP_RESULT][constants.PROP_VALUE])
+                install_links.append(
+                    inst[constants.PROP_RESULT][constants.PROP_VALUE])
     if len(install_links) > 0:
         # remove duplicates and generate codemeta
         install_links = list(set(install_links))

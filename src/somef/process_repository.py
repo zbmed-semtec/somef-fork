@@ -10,6 +10,10 @@ from urllib.parse import urlparse
 from .utils import constants
 from . import configuration
 from .process_results import Result
+import json
+
+auth2token_header = {'Authorization': 'token ' +
+                     "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"}
 
 
 # the same as requests.get(args).json(), but protects against rate limiting
@@ -30,7 +34,8 @@ def rate_limit_get(*args, backoff_rate=2, initial_backoff=1, **kwargs):
         response = response.json()
         if 'message' in response and 'API rate limit exceeded' in response['message']:
             rate_limited = True
-            logging.warning(f"rate limited. Backing off for {initial_backoff} seconds")
+            logging.warning(
+                f"rate limited. Backing off for {initial_backoff} seconds")
             time.sleep(initial_backoff)
             # increase the backoff for next time
             initial_backoff *= backoff_rate
@@ -76,7 +81,7 @@ def load_gitlab_repository_metadata(repo_metadata: Result, repository_url):
     project_id = get_project_id(repository_url)
     project_api_url = f"https://gitlab.com/api/v4/projects/{project_id}"
     logging.info(f"Downloading {project_api_url}")
-    details = requests.get(project_api_url)
+    details = requests.get(project_api_url, headers=auth2token_header)
     project_details = details.json()
     date = details.headers["date"]
 
@@ -100,7 +105,8 @@ def load_gitlab_repository_metadata(repo_metadata: Result, repository_url):
     elif 'default_branch' in project_details.keys():
         general_resp = {'defaultBranch': project_details['default_branch']}
     else:
-        logging.error("Could not retrieve information for the GitLab repository")
+        logging.error(
+            "Could not retrieve information for the GitLab repository")
         return repo_metadata
 
     if 'message' in general_resp:
@@ -137,13 +143,15 @@ def load_gitlab_repository_metadata(repo_metadata: Result, repository_url):
     # If we didn't find it, look for the license
     if constants.PROP_VALUE not in license_result or license_result[constants.PROP_VALUE] is None:
         possible_license_url = f"{repository_url}/-/blob/master/LICENSE"
-        license_text_resp = requests.get(possible_license_url)
+        license_text_resp = requests.get(
+            possible_license_url, headers=auth2token_header)
         if license_text_resp.status_code == 200:
             # license_text = license_text_resp.text
             license_result[constants.PROP_VALUE] = possible_license_url
 
     if constants.PROP_VALUE in license_result:
-        repo_metadata.add_result(constants.CAT_LICENSE, license_result, 1, constants.TECHNIQUE_GITLAB_API)
+        repo_metadata.add_result(
+            constants.CAT_LICENSE, license_result, 1, constants.TECHNIQUE_GITLAB_API)
 
     # get keywords / topics
     # topics_headers = header
@@ -168,7 +176,8 @@ def load_gitlab_repository_metadata(repo_metadata: Result, repository_url):
             constants.PROP_VALUE: value,
             constants.PROP_TYPE: constants.STRING
         }
-        repo_metadata.add_result(constants.CAT_KEYWORDS, result, 1, constants.TECHNIQUE_GITLAB_API)
+        repo_metadata.add_result(
+            constants.CAT_KEYWORDS, result, 1, constants.TECHNIQUE_GITLAB_API)
 
     # get social features: stargazers_count
     if project_details['star_count'] is not None:
@@ -176,7 +185,8 @@ def load_gitlab_repository_metadata(repo_metadata: Result, repository_url):
             constants.PROP_VALUE: project_details['star_count'],
             constants.PROP_TYPE: constants.NUMBER
         }
-        repo_metadata.add_result(constants.CAT_STARS, result, 1, constants.TECHNIQUE_GITLAB_API)
+        repo_metadata.add_result(
+            constants.CAT_STARS, result, 1, constants.TECHNIQUE_GITLAB_API)
 
     # get social features: forks_count
     if project_details['forks_count'] is not None:
@@ -188,13 +198,15 @@ def load_gitlab_repository_metadata(repo_metadata: Result, repository_url):
     # get programming languages
     if 'languages_url' in project_details.keys():
         if "message" in project_details['languages_url']:
-            logging.error("Languages Error: " + project_details['languages_url']["message"])
+            logging.error("Languages Error: " +
+                          project_details['languages_url']["message"])
         else:
             result = {
                 constants.PROP_VALUE: list(project_details['languages_url']),
                 constants.PROP_TYPE: constants.STRING
             }
-            repo_metadata.add_result(constants.CAT_PROGRAMMING_LANGUAGES, result, 1, constants.TECHNIQUE_GITLAB_API)
+            repo_metadata.add_result(
+                constants.CAT_PROGRAMMING_LANGUAGES, result, 1, constants.TECHNIQUE_GITLAB_API)
 
     if 'readme_url' in project_details.keys():
         repo_metadata.add_result(constants.CAT_README_URL, {
@@ -227,7 +239,7 @@ def download_gitlab_files(directory, owner, repo_name, repo_branch, repo_ref):
     if len(path_components) == 4:
         repo_archive_url = f"https://gitlab.com/{owner}/{repo_name}/-/archive/{repo_branch}/{path_components[3]}.zip"
     logging.info(f"Downloading {repo_archive_url}")
-    repo_download = requests.get(repo_archive_url)
+    repo_download = requests.get(repo_archive_url, headers=auth2token_header)
     repo_zip = repo_download.content
 
     repo_zip_file = os.path.join(directory, "repo.zip")
@@ -273,13 +285,17 @@ def download_readme(owner, repo_name, default_branch, repo_type):
         logging.error("Repository type not supported")
         return None
     logging.info(f"Downloading {primary_url}")
-    repo_download = requests.get(primary_url)
+    repo_download = requests.get(primary_url, headers=auth2token_header)
     if repo_download.status_code == 404:
-        logging.error(f"Error: Archive request failed with HTTP {repo_download.status_code}")
+        print(3)
+        logging.error(
+            f"Error: Archive request failed with HTTP {repo_download.status_code}")
         logging.info(f"Trying to download {secondary_url}")
-        repo_download = requests.get(secondary_url)
+        repo_download = requests.get(secondary_url, headers=auth2token_header)
     if repo_download.status_code != 200:
-        logging.error(f"Error: Archive request failed with HTTP {repo_download.status_code}")
+        print(4)
+        logging.error(
+            f"Error: Archive request failed with HTTP {repo_download.status_code}")
         return None
     repo_zip = repo_download.content
     text = repo_zip.decode('utf-8')
@@ -327,7 +343,8 @@ def load_online_repository_metadata(repository_metadata: Result, repository_url,
     path_components = url.path.split('/')
 
     if len(path_components) < 3:
-        logging.error("Repository link is not correct. \nThe correct format is https://github.com/{owner}/{repo_name}.")
+        logging.error(
+            "Repository link is not correct. \nThe correct format is https://github.com/{owner}/{repo_name}.")
         return repository_metadata, "", "", ""
 
     owner = path_components[1]
@@ -367,7 +384,8 @@ def load_online_repository_metadata(repository_metadata: Result, repository_url,
     # filter the general response with only the fields we are interested in, mapping them to our keys
     filtered_resp = {}
     if not ignore_api_metadata:
-        filtered_resp = do_crosswalk(general_resp, constants.github_crosswalk_table)
+        filtered_resp = do_crosswalk(
+            general_resp, constants.github_crosswalk_table)
     # add download URL
     filtered_resp[constants.CAT_DOWNLOAD_URL] = f"https://github.com/{owner}/{repo_name}/releases"
 
@@ -403,12 +421,15 @@ def load_online_repository_metadata(repository_metadata: Result, repository_url,
                     constants.PROP_VALUE: value,
                     constants.PROP_TYPE: value_type
                 }
-            repository_metadata.add_result(category, result, 1, constants.TECHNIQUE_GITHUB_API)
+            repository_metadata.add_result(
+                category, result, 1, constants.TECHNIQUE_GITHUB_API)
     # get languages
     if not ignore_api_metadata:
-        languages, date = rate_limit_get(filtered_resp['languages_url'], headers=header)
+        languages, date = rate_limit_get(
+            filtered_resp['languages_url'], headers=header)
         if "message" in languages:
-            logging.error("Error while retrieving languages: " + languages["message"])
+            logging.error("Error while retrieving languages: " +
+                          languages["message"])
         else:
             filtered_resp['languages'] = list(languages.keys())
             for l, s in languages.items():
@@ -445,7 +466,8 @@ def load_online_repository_metadata(repository_metadata: Result, repository_url,
                         if value != "":
                             release_obj[category] = value
                         else:
-                            logging.warning("Ignoring empty value in release for " + category)
+                            logging.warning(
+                                "Ignoring empty value in release for " + category)
                 repository_metadata.add_result(constants.CAT_RELEASES, release_obj, 1,
                                                constants.TECHNIQUE_GITHUB_API)
     logging.info("Repository information successfully loaded.\n")
@@ -472,7 +494,8 @@ def do_crosswalk(data, crosswalk_table):
         if value is not None:
             output[somef_key] = value
         else:
-            logging.error(f"Error: key {path} not present in github repository")
+            logging.error(
+                f"Error: key {path} not present in github repository")
     return output
 
 
@@ -520,15 +543,21 @@ def download_github_files(directory, owner, repo_name, repo_ref):
     # download the repo at the selected branch with the link
     repo_archive_url = f"https://github.com/{owner}/{repo_name}/archive/{repo_ref}.zip"
     logging.info(f"Downloading {repo_archive_url}")
-    repo_download = requests.get(repo_archive_url)
+    repo_download = requests.get(repo_archive_url, headers=auth2token_header)
     if repo_download.status_code == 404:
-        logging.error(f"Error: Archive request failed with HTTP {repo_download.status_code}")
+        print(2)
+        logging.error(
+            f"Error: Archive request failed with HTTP {repo_download.status_code}")
         repo_archive_url = f"https://github.com/{owner}/{repo_name}/archive/main.zip"
         logging.info(f"Trying to download {repo_archive_url}")
-        repo_download = requests.get(repo_archive_url)
+        repo_download = requests.get(
+            repo_archive_url, headers=auth2token_header)
 
     if repo_download.status_code != 200:
-        sys.exit(f"Error: Archive request failed with HTTP {repo_download.status_code}")
+        print(1)
+        return None
+        sys.exit(
+            f"Error: Archive request failed with HTTP {repo_download.status_code}")
     repo_zip = repo_download.content
 
     repo_name_full = owner + "_" + repo_name
@@ -551,7 +580,7 @@ def download_github_files(directory, owner, repo_name, repo_ref):
 def get_project_id(repository_url):
     """Function to download a repository, given its URL"""
     logging.info(f"Downloading {repository_url}")
-    response = requests.get(repository_url)
+    response = requests.get(repository_url, headers=auth2token_header)
     response_str = str(response.content.decode('utf-8'))
     init = response_str.find('\"project_id\":')
     project_id = "-1"
@@ -578,6 +607,6 @@ class GithubUrlError(Exception):
 def get_readme_content(readme_url):
     """Function to retrieve the content of a readme file given its URL (github)"""
     readme_url = readme_url.replace("/blob/", "/raw/")
-    readme = requests.get(readme_url)
+    readme = requests.get(readme_url, headers=auth2token_header)
     readme_text = readme.content.decode('utf-8')
     return readme_text

@@ -20,5 +20,6 @@ requires = [
     "contractions>=0.1.66",
     "imblearn>=0.0",
     "morph-kgc"
+    "cffconvert==2.0.0"
 ]
 build-backend = "setuptools.build_meta"

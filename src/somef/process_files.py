@@ -3,9 +3,11 @@ import os
 import re
 import urllib
 from .utils import constants, markdown_utils
-from . import extract_ontologies,extract_workflows
+from . import extract_ontologies, extract_workflows
 from .process_results import Result
 from chardet import detect
+from cffconvert import Citation
+import json
 
 
 def process_repository_files(repo_dir, metadata_result: Result, repo_type, owner="", repo_name="",
@@ -68,8 +70,10 @@ def process_repository_files(repo_dir, metadata_result: Result, repo_type, owner
                                 try:
                                     text = data_file_text.decode("utf-8")
                                 except UnicodeError as err:
-                                    logging.error(f"{type(err).__name__} was raised: {err} Trying other encodings...")
-                                    text = data_file_text.decode(detect(data_file_text)["encoding"])
+                                    logging.error(
+                                        f"{type(err).__name__} was raised: {err} Trying other encodings...")
+                                    text = data_file_text.decode(
+                                        detect(data_file_text)["encoding"])
                                 if repo_type == constants.RepositoryType.GITHUB:
                                     readme_url = convert_to_raw_user_content_github(filename, owner,
                                                                                     repo_name,
@@ -82,8 +86,10 @@ def process_repository_files(repo_dir, metadata_result: Result, repo_type, owner
                                                                1,
                                                                constants.TECHNIQUE_FILE_EXPLORATION)
                         except ValueError:
-                            logging.error("README Error: error while reading file content")
-                            logging.error(f"{type(err).__name__} was raised: {err}")
+                            logging.error(
+                                "README Error: error while reading file content")
+                            logging.error(
+                                f"{type(err).__name__} was raised: {err}")
                 if "LICENCE" == filename.upper() or "LICENSE" == filename.upper() or "LICENSE.MD" == filename.upper():
                     # to do (issue 530) if there are two licenses, keep the one closer to the root
                     metadata_result = get_file_content_or_link(repo_type, file_path, owner, repo_name,
@@ -124,11 +130,16 @@ def process_repository_files(repo_dir, metadata_result: Result, repo_type, owner
                                                                metadata_result, constants.CAT_CITATION,
                                                                constants.FORMAT_BIB)
                 if "CITATION.CFF" == filename.upper():
-                    metadata_result = get_file_content_or_link(repo_type, file_path, owner, repo_name,
-                                                               repo_default_branch,
-                                                               repo_dir, repo_relative_path, filename, dir_path,
-                                                               metadata_result, constants.CAT_CITATION,
-                                                               constants.FORMAT_CFF)
+                    metadata_result = get_citation_content(repo_type, file_path, owner, repo_name,
+                                                           repo_default_branch,
+                                                           repo_dir, repo_relative_path, filename, dir_path,
+                                                           metadata_result, constants.CAT_CITATION,
+                                                           constants.FORMAT_CFF)
+                    # metadata_result = get_file_content_or_link(repo_type, file_path, owner, repo_name,
+                    #                                            repo_default_branch,
+                    #                                            repo_dir, repo_relative_path, filename, dir_path,
+                    #                                            metadata_result, constants.CAT_CITATION,
+                    #                                            constants.FORMAT_CFF)
                 if filename.endswith(".sh"):
                     sh_url = get_file_link(repo_type, file_path, owner, repo_name, repo_default_branch, repo_dir,
                                            repo_relative_path, filename)
@@ -140,7 +151,8 @@ def process_repository_files(repo_dir, metadata_result: Result, repo_type, owner
                                                )
                 if filename.endswith(".ttl") or filename.endswith(".owl") or filename.endswith(".nt") or filename. \
                         endswith(".xml"):
-                    uri = extract_ontologies.is_file_ontology(os.path.join(repo_dir, file_path))
+                    uri = extract_ontologies.is_file_ontology(
+                        os.path.join(repo_dir, file_path))
                     if uri is not None:
                         onto_url = get_file_link(repo_type, file_path, owner, repo_name, repo_default_branch, repo_dir,
                                                  repo_relative_path, filename)
@@ -150,15 +162,17 @@ def process_repository_files(repo_dir, metadata_result: Result, repo_type, owner
                                                        constants.PROP_TYPE: constants.URL
                                                    }, 1, constants.TECHNIQUE_FILE_EXPLORATION
                                                    )
-                if filename.endswith(".ga") or filename.endswith(".cwl") or filename.endswith(".nf") or (filename.endswith(".snake") or filename.endswith(".smk")  or "Snakefile"==filename_no_ext) or filename.endswith(".knwf") or filename.endswith(".t2flow") or filename.endswith(".dag") or filename.endswith(".kar") or filename.endswith(".wdl"):
-                    analysis = extract_workflows.is_file_workflow(os.path.join(repo_dir, file_path))
+                if filename.endswith(".ga") or filename.endswith(".cwl") or filename.endswith(".nf") or (filename.endswith(".snake") or filename.endswith(".smk") or "Snakefile" == filename_no_ext) or filename.endswith(".knwf") or filename.endswith(".t2flow") or filename.endswith(".dag") or filename.endswith(".kar") or filename.endswith(".wdl"):
+                    analysis = extract_workflows.is_file_workflow(
+                        os.path.join(repo_dir, file_path))
                     if analysis == True:
-                        Workflow_url=get_file_link(repo_type,file_path,owner,repo_name,repo_default_branch,repo_dir,repo_relative_path,filename) 
+                        Workflow_url = get_file_link(
+                            repo_type, file_path, owner, repo_name, repo_default_branch, repo_dir, repo_relative_path, filename)
                         metadata_result.add_result(constants.CAT_WORKFLOWS,
-                                                    {
-                                                        constants.PROP_VALUE: Workflow_url,
-                                                        constants.PROP_TYPE: constants.URL
-                                                    }, 1, constants.TECHNIQUE_FILE_EXPLORATION)
+                                                   {
+                                                       constants.PROP_VALUE: Workflow_url,
+                                                       constants.PROP_TYPE: constants.URL
+                                                   }, 1, constants.TECHNIQUE_FILE_EXPLORATION)
             # TO DO: Improve this a bit, as just returning the docs folder is not that informative
             for dir_name in dir_names:
                 if dir_name.lower() == "docs":
@@ -166,10 +180,13 @@ def process_repository_files(repo_dir, metadata_result: Result, repo_type, owner
                         docs_path = dir_name
                     else:
                         if repo_relative_path.find("\\") >= 0:
-                            new_repo_relative_path = repo_relative_path.replace("\\", "/")
-                            docs_path = os.path.join(new_repo_relative_path, dir_name)
+                            new_repo_relative_path = repo_relative_path.replace(
+                                "\\", "/")
+                            docs_path = os.path.join(
+                                new_repo_relative_path, dir_name)
                         else:
-                            docs_path = os.path.join(repo_relative_path, dir_name)
+                            docs_path = os.path.join(
+                                repo_relative_path, dir_name)
                     names = os.listdir(os.path.join(repo_dir, docs_path))
                     for name in names:
                         if name.lower().endswith(".pdf") or name.lower().endswith(".md") or name.lower().endswith(
@@ -221,6 +238,70 @@ def get_file_link(repo_type, file_path, owner, repo_name, repo_default_branch, r
         return os.path.join(repo_dir, repo_relative_path, filename)
 
 
+def get_citation_content(repo_type, file_path, owner, repo_name, repo_default_branch, repo_dir, repo_relative_path,
+                         filename, dir_path, metadata_result: Result, category, format_result=""):
+    """
+    This method will return to the JSON file the contents of the file or its link if it cannot process the contents
+    Parameters
+    ----------
+    repo_type
+    file_path
+    owner
+    repo_name
+    repo_default_branch
+    repo_dir
+    repo_relative_path
+    filename
+    dir_path
+    metadata_result
+    category
+    format_result
+
+    Returns
+    -------
+    @returns String with the file content or url link to the file
+    """
+    url = get_file_link(repo_type, file_path, owner, repo_name, repo_default_branch, repo_dir, repo_relative_path,
+                        filename)
+
+    with open(os.path.join(dir_path, filename), "r") as data_file:
+        file_text = data_file.read()
+        cff = Citation(file_text).as_codemeta()
+        cff_json = json.loads(cff)
+        result = {
+            constants.PROP_VALUE: cff_json['author'],
+            constants.PROP_TYPE: constants.FILE_DUMP
+        }
+        if format_result != "":
+            result[constants.PROP_FORMAT] = format_result
+        metadata_result.add_result(
+            category, result, 1, constants.TECHNIQUE_FILE_EXPLORATION, url)
+    return metadata_result
+
+    # try:
+    #     with open(os.path.join(dir_path, filename), "r") as data_file:
+    #         file_text = data_file.read()
+    #         cff = Citation(file_text)
+    #         cff_json = json.loads(cff)
+    #         with open('cff_test.json', 'w') as outfile:
+    #             json.dump(cff_json, outfile)
+    #         result = {
+    #             constants.PROP_VALUE: file_text,
+    #             constants.PROP_TYPE: constants.FILE_DUMP
+    #         }
+    #         if format_result != "":
+    #             result[constants.PROP_FORMAT] = format_result
+    #         metadata_result.add_result(
+    #             category, result, 1, constants.TECHNIQUE_FILE_EXPLORATION, url)
+    # except:
+    #     metadata_result.add_result(category,
+    #                                {
+    #                                    constants.PROP_VALUE: url,
+    #                                    constants.PROP_TYPE: constants.URL
+    #                                }, 1, constants.TECHNIQUE_FILE_EXPLORATION)
+    # return metadata_result
+
+
 def get_file_content_or_link(repo_type, file_path, owner, repo_name, repo_default_branch, repo_dir, repo_relative_path,
                              filename, dir_path, metadata_result: Result, category, format_result=""):
     """
@@ -255,7 +336,8 @@ def get_file_content_or_link(repo_type, file_path, owner, repo_name, repo_defaul
             }
             if format_result != "":
                 result[constants.PROP_FORMAT] = format_result
-            metadata_result.add_result(category, result, 1, constants.TECHNIQUE_FILE_EXPLORATION, url)
+            metadata_result.add_result(
+                category, result, 1, constants.TECHNIQUE_FILE_EXPLORATION, url)
     except:
         metadata_result.add_result(category,
                                    {
