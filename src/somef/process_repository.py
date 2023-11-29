@@ -10,6 +10,10 @@ from urllib.parse import urlparse
 from .utils import constants
 from . import configuration
 from .process_results import Result
+import json
+
+auth2token_header = {'Authorization': 'token ' +
+                     "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"}
 
 
 # the same as requests.get(args).json(), but protects against rate limiting
@@ -77,7 +81,7 @@ def load_gitlab_repository_metadata(repo_metadata: Result, repository_url):
     project_id = get_project_id(repository_url)
     project_api_url = f"https://gitlab.com/api/v4/projects/{project_id}"
     logging.info(f"Downloading {project_api_url}")
-    details = requests.get(project_api_url)
+    details = requests.get(project_api_url, headers=auth2token_header)
     project_details = details.json()
     date = details.headers["date"]
 
@@ -139,7 +143,8 @@ def load_gitlab_repository_metadata(repo_metadata: Result, repository_url):
     # If we didn't find it, look for the license
     if constants.PROP_VALUE not in license_result or license_result[constants.PROP_VALUE] is None:
         possible_license_url = f"{repository_url}/-/blob/master/LICENSE"
-        license_text_resp = requests.get(possible_license_url)
+        license_text_resp = requests.get(
+            possible_license_url, headers=auth2token_header)
         if license_text_resp.status_code == 200:
             # license_text = license_text_resp.text
             license_result[constants.PROP_VALUE] = possible_license_url
@@ -234,7 +239,7 @@ def download_gitlab_files(directory, owner, repo_name, repo_branch, repo_ref):
     if len(path_components) == 4:
         repo_archive_url = f"https://gitlab.com/{owner}/{repo_name}/-/archive/{repo_branch}/{path_components[3]}.zip"
     logging.info(f"Downloading {repo_archive_url}")
-    repo_download = requests.get(repo_archive_url)
+    repo_download = requests.get(repo_archive_url, headers=auth2token_header)
     repo_zip = repo_download.content
 
     repo_zip_file = os.path.join(directory, "repo.zip")
@@ -280,13 +285,15 @@ def download_readme(owner, repo_name, default_branch, repo_type):
         logging.error("Repository type not supported")
         return None
     logging.info(f"Downloading {primary_url}")
-    repo_download = requests.get(primary_url)
+    repo_download = requests.get(primary_url, headers=auth2token_header)
     if repo_download.status_code == 404:
+        print(3)
         logging.error(
             f"Error: Archive request failed with HTTP {repo_download.status_code}")
         logging.info(f"Trying to download {secondary_url}")
-        repo_download = requests.get(secondary_url)
+        repo_download = requests.get(secondary_url, headers=auth2token_header)
     if repo_download.status_code != 200:
+        print(4)
         logging.error(
             f"Error: Archive request failed with HTTP {repo_download.status_code}")
         return None
@@ -536,15 +543,19 @@ def download_github_files(directory, owner, repo_name, repo_ref):
     # download the repo at the selected branch with the link
     repo_archive_url = f"https://github.com/{owner}/{repo_name}/archive/{repo_ref}.zip"
     logging.info(f"Downloading {repo_archive_url}")
-    repo_download = requests.get(repo_archive_url)
+    repo_download = requests.get(repo_archive_url, headers=auth2token_header)
     if repo_download.status_code == 404:
+        print(2)
         logging.error(
             f"Error: Archive request failed with HTTP {repo_download.status_code}")
         repo_archive_url = f"https://github.com/{owner}/{repo_name}/archive/main.zip"
         logging.info(f"Trying to download {repo_archive_url}")
-        repo_download = requests.get(repo_archive_url)
+        repo_download = requests.get(
+            repo_archive_url, headers=auth2token_header)
 
     if repo_download.status_code != 200:
+        print(1)
+        return None
         sys.exit(
             f"Error: Archive request failed with HTTP {repo_download.status_code}")
     repo_zip = repo_download.content
@@ -569,7 +580,7 @@ def download_github_files(directory, owner, repo_name, repo_ref):
 def get_project_id(repository_url):
     """Function to download a repository, given its URL"""
     logging.info(f"Downloading {repository_url}")
-    response = requests.get(repository_url)
+    response = requests.get(repository_url, headers=auth2token_header)
     response_str = str(response.content.decode('utf-8'))
     init = response_str.find('\"project_id\":')
     project_id = "-1"
@@ -596,6 +607,6 @@ class GithubUrlError(Exception):
 def get_readme_content(readme_url):
     """Function to retrieve the content of a readme file given its URL (github)"""
     readme_url = readme_url.replace("/blob/", "/raw/")
-    readme = requests.get(readme_url)
+    readme = requests.get(readme_url, headers=auth2token_header)
     readme_text = readme.content.decode('utf-8')
     return readme_text
