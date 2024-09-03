@@ -2,14 +2,15 @@ import logging
 import os
 import re
 import urllib
+from urllib.parse import urlparse
 from .utils import constants, markdown_utils
-from . import extract_ontologies,extract_workflows
+from . import extract_ontologies, extract_workflows
 from .process_results import Result
 from chardet import detect
 
 
 def process_repository_files(repo_dir, metadata_result: Result, repo_type, owner="", repo_name="",
-                             repo_default_branch=""):
+                             repo_default_branch="", ignore_test_folder=True):
     """
     Method that given a folder, it recognizes whether there are notebooks, dockerfiles, docs, script files or
     ontologies.
@@ -21,6 +22,7 @@ def process_repository_files(repo_dir, metadata_result: Result, repo_type, owner
     @param owner: owner of the repo (only for github/gitlab repos)
     @param repo_name: repository name (only for github/gitlab repos)
     @param repo_default_branch: branch (only for github/gitlab repos)
+    @param ignore_test_folder: flag to ignore the contents of test folders (e.g., licenses)
 
     Returns
     -------
@@ -30,8 +32,17 @@ def process_repository_files(repo_dir, metadata_result: Result, repo_type, owner
     try:
         for dir_path, dir_names, filenames in os.walk(repo_dir):
             repo_relative_path = os.path.relpath(dir_path, repo_dir)
+            # if this is a test folder, we ignore it (except for the root repo)
+            if ignore_test_folder and repo_relative_path != "." and "test" in repo_relative_path.lower():
+                # skip this file if it's in a test folder, or inside one
+                continue
             for filename in filenames:
                 file_path = os.path.join(repo_relative_path, filename)
+                # ignore image files that may have  correct name
+                if filename.lower().endswith(".jpg") or filename.lower().endswith(".jpeg") or \
+                        filename.lower().endswith(".svg") or filename.lower().endswith(".png") or \
+                        filename.lower().endswith(".gif"):
+                    continue
                 if filename == "Dockerfile" or filename.lower() == "docker-compose.yml":
                     docker_url = get_file_link(repo_type, file_path, owner, repo_name, repo_default_branch, repo_dir,
                                                repo_relative_path, filename)
@@ -85,7 +96,6 @@ def process_repository_files(repo_dir, metadata_result: Result, repo_type, owner
                             logging.error("README Error: error while reading file content")
                             logging.error(f"{type(err).__name__} was raised: {err}")
                 if "LICENCE" == filename.upper() or "LICENSE" == filename.upper() or "LICENSE.MD" == filename.upper():
-                    # to do (issue 530) if there are two licenses, keep the one closer to the root
                     metadata_result = get_file_content_or_link(repo_type, file_path, owner, repo_name,
                                                                repo_default_branch,
                                                                repo_dir, repo_relative_path, filename, dir_path,
@@ -100,8 +110,7 @@ def process_repository_files(repo_dir, metadata_result: Result, repo_type, owner
                                                                repo_default_branch,
                                                                repo_dir, repo_relative_path, filename, dir_path,
                                                                metadata_result, constants.CAT_CONTRIBUTING_GUIDELINES)
-
-                if "ACKNOWLEDGMENT" in filename.upper() or "ACKNOWLEDGEMENT" in filename.upper():
+                if "ACKNOWLEDGMENT" in filename.upper() or "ACKNOWLEDGEMENT.MD" == filename.upper():
                     metadata_result = get_file_content_or_link(repo_type, file_path, owner, repo_name,
                                                                repo_default_branch,
                                                                repo_dir, repo_relative_path, filename, dir_path,
@@ -150,15 +159,20 @@ def process_repository_files(repo_dir, metadata_result: Result, repo_type, owner
                                                        constants.PROP_TYPE: constants.URL
                                                    }, 1, constants.TECHNIQUE_FILE_EXPLORATION
                                                    )
-                if filename.endswith(".ga") or filename.endswith(".cwl") or filename.endswith(".nf") or (filename.endswith(".snake") or filename.endswith(".smk")  or "Snakefile"==filename_no_ext) or filename.endswith(".knwf") or filename.endswith(".t2flow") or filename.endswith(".dag") or filename.endswith(".kar") or filename.endswith(".wdl"):
+                if filename.endswith(".ga") or filename.endswith(".cwl") or filename.endswith(".nf") or (
+                        filename.endswith(".snake") or filename.endswith(
+                    ".smk") or "Snakefile" == filename_no_ext) or filename.endswith(".knwf") or filename.endswith(
+                    ".t2flow") or filename.endswith(".dag") or filename.endswith(".kar") or filename.endswith(
+                    ".wdl"):
                     analysis = extract_workflows.is_file_workflow(os.path.join(repo_dir, file_path))
-                    if analysis == True:
-                        Workflow_url=get_file_link(repo_type,file_path,owner,repo_name,repo_default_branch,repo_dir,repo_relative_path,filename) 
+                    if analysis:
+                        workflow_url = get_file_link(repo_type, file_path, owner, repo_name, repo_default_branch,
+                                                     repo_dir, repo_relative_path, filename)
                         metadata_result.add_result(constants.CAT_WORKFLOWS,
-                                                    {
-                                                        constants.PROP_VALUE: Workflow_url,
-                                                        constants.PROP_TYPE: constants.URL
-                                                    }, 1, constants.TECHNIQUE_FILE_EXPLORATION)
+                                                   {
+                                                       constants.PROP_VALUE: workflow_url,
+                                                       constants.PROP_TYPE: constants.URL
+                                                   }, 1, constants.TECHNIQUE_FILE_EXPLORATION)
             # TO DO: Improve this a bit, as just returning the docs folder is not that informative
             for dir_name in dir_names:
                 if dir_name.lower() == "docs":
@@ -246,6 +260,28 @@ def get_file_content_or_link(repo_type, file_path, owner, repo_name, repo_defaul
     """
     url = get_file_link(repo_type, file_path, owner, repo_name, repo_default_branch, repo_dir, repo_relative_path,
                         filename)
+    # do not add result if a file under the same category exist. Only for license, citation, COC, contribution, README
+    replace = False
+    results = metadata_result.results
+    try:
+        if category in results:
+            # check category exists, using the file exploration technique, and retrieve source
+            if category in [constants.CAT_CITATION, constants.CAT_LICENSE, constants.CAT_COC, constants.CAT_README_URL,
+                            constants.CAT_CONTRIBUTING_GUIDELINES]:
+                for entry in results[category]:
+                    if (constants.PROP_SOURCE in entry and
+                            entry[constants.PROP_TECHNIQUE] is constants.TECHNIQUE_FILE_EXPLORATION):
+                        new_file_path = extract_directory_path(url)
+                        existing_path = extract_directory_path(entry[constants.PROP_SOURCE])
+                        if new_file_path.startswith(existing_path):
+                            # the existing file is higher, ignore this one
+                            return metadata_result
+                        else:
+                            # replace result in hierarchy (below)
+                            replace = True
+                        break
+    except Exception as e:
+        logging.warning("Error when trying to determine if redundant files exist " + str(e))
     try:
         with open(os.path.join(dir_path, filename), "r") as data_file:
             file_text = data_file.read()
@@ -255,14 +291,41 @@ def get_file_content_or_link(repo_type, file_path, owner, repo_name, repo_defaul
             }
             if format_result != "":
                 result[constants.PROP_FORMAT] = format_result
-            metadata_result.add_result(category, result, 1, constants.TECHNIQUE_FILE_EXPLORATION, url)
+            if replace:
+                metadata_result.edit_hierarchical_result(category, result, 1, constants.TECHNIQUE_FILE_EXPLORATION, url)
+            else:
+                metadata_result.add_result(category, result, 1, constants.TECHNIQUE_FILE_EXPLORATION, url)
     except:
-        metadata_result.add_result(category,
-                                   {
-                                       constants.PROP_VALUE: url,
-                                       constants.PROP_TYPE: constants.URL
-                                   }, 1, constants.TECHNIQUE_FILE_EXPLORATION)
+        if replace:
+            metadata_result.edit_hierarchical_result(category,
+                                                     {
+                                                         constants.PROP_VALUE: url,
+                                                         constants.PROP_TYPE: constants.URL
+                                                     }, 1, constants.TECHNIQUE_FILE_EXPLORATION)
+        else:
+            metadata_result.add_result(category,
+                                       {
+                                           constants.PROP_VALUE: url,
+                                           constants.PROP_TYPE: constants.URL
+                                       }, 1, constants.TECHNIQUE_FILE_EXPLORATION)
     return metadata_result
+
+
+def extract_directory_path(path):
+    """
+    Method to extract a directorr or URL path without the file name
+    Parameters
+    ----------
+    path: file path
+
+    Returns
+    -------
+    the URL/file path without the name of the file
+    """
+    if os.path.exists(path):
+        return os.path.dirname(os.path.abspath(path))
+    else:
+        return os.path.dirname(urlparse(path).path)
 
 
 def convert_to_raw_user_content_github(partial, owner, repo_name, repo_ref):

@@ -10,13 +10,13 @@ install_requires = [
     "click-option-group==0.5.3",
     "markdown==3.3.6",
     "matplotlib==3.5.0",
-    "nltk==3.6.6",
+    "nltk==3.9",
     "numpy==1.22.0",
-    "pandas==1.3.4",
+    "pandas>=2.0.0",
     "rdflib>=6.0.2",
     "rdflib-jsonld==0.6.2",
     "requests>=2.22.0",
-    "scikit-learn==1.0",
+    "scikit-learn>=1.0",
     "textblob==0.17.1",
     "validators==0.18.2",
     "xgboost==1.5.0",
@@ -24,9 +24,11 @@ install_requires = [
     "inflect>=5.4.0",
     "contractions>=0.1.66",
     "chardet==5.0.0",
-    "imbalanced-learn>=0.8.1",
+    "imbalanced-learn>=0.11.0",
     "pytest",
-    "morph-kgc>=2.3.1"
+    "morph-kgc>=2.3.1",
+    "bibtexparser==1.4.1",
+    "nbformat>=5.9.2"
 ]
 
 

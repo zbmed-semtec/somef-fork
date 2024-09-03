@@ -17,9 +17,6 @@ class URLParamType(click.types.StringParamType):
 @click.version_option(__version__)
 def cli():
     click.echo("SOftware Metadata Extraction Framework (SOMEF) Command Line Interface")
-    # Logging setup
-    logging.basicConfig(level=logging.DEBUG, format='%(asctime)s-%(levelname)s-%(message)s',
-                        datefmt='%d-%b-%y %H:%M:%S')
 
 
 @cli.command(help="Configure GitHub credentials and classifiers file path")
@@ -150,6 +147,13 @@ def configure(auto, base_uri):
     type=click.Path(),
     help="""SOMEF will NOT delete the temporary folder where files are stored for analysis. Files will be stored at the
     desired path"""
+)
+@click.option(
+    "--ignore_test_folder",
+    "-itf",
+    is_flag=True,
+    default=True,
+    help="""SOMEF will ignore the contents of all files within folders named test (True by default)"""
 )
 def describe(**kwargs):
     # import so missing packages get installed when appropriate

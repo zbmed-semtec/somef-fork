@@ -23,6 +23,7 @@ REGEXP_GITTER = "[![Gitter chat]"
 REGEXP_PYPI = "[![PyPI]"
 REGEXP_PYPI_2 = "[![Latest PyPI version]"
 REGEXP_COLAB = "https://colab.research.google.com/drive"
+# needed to cleanup bibtext files.
 REGEXP_BIBTEX = r'\@[a-zA-Z]+\{[.\n\S\s]+?[author|title][.\n\S\s]+?[author|title][.\n\S\s]+?\n\}'
 REGEXP_DOI = r'\[\!\[DOI\]([^\]]+)\]\(([^)]+)\)'
 REGEXP_LINKS = r"\[(.*?)?\]\(([^)]+)\)"
@@ -52,10 +53,9 @@ CAT_FORKS_URLS = "forks_url"
 CAT_FULL_NAME = "full_name"
 CAT_FULL_TITLE = "full_title"
 CAT_HAS_BUILD_FILE = "has_build_file"
-CAT_HAS_EXECUTABLE_NOTEBOOK = "has_executable_notebook"
 CAT_HAS_SCRIPT_FILE = "has_script_file"
 CAT_IDENTIFIER = "identifier"
-CAT_IMAGE = "image"
+CAT_IMAGE = "images"
 CAT_INSTALLATION = "installation"
 CAT_INVOCATION = "invocation"
 CAT_ISSUE_TRACKER = "issue_tracker"
@@ -94,7 +94,7 @@ all_categories = [CAT_APPLICATION_DOMAIN, CAT_ACKNOWLEDGEMENT, CAT_CITATION, CAT
                   CAT_COC, CAT_CODE_REPOSITORY, CAT_CONTACT, CAT_DESCRIPTION, CAT_DATE_CREATED, CAT_DATE_UPDATED,
                   CAT_DOCUMENTATION, CAT_DOWNLOAD, CAT_DOWNLOAD_URL, CAT_EXECUTABLE_EXAMPLE,
                   CAT_FAQ, CAT_FORK_COUNTS, CAT_FORKS_URLS, CAT_FULL_NAME, CAT_FULL_TITLE, CAT_HAS_BUILD_FILE,
-                  CAT_HAS_EXECUTABLE_NOTEBOOK, CAT_HAS_SCRIPT_FILE, CAT_IDENTIFIER, CAT_IMAGE, CAT_INSTALLATION,
+                  CAT_HAS_SCRIPT_FILE, CAT_IDENTIFIER, CAT_IMAGE, CAT_INSTALLATION,
                   CAT_INVOCATION, CAT_ISSUE_TRACKER, CAT_KEYWORDS, CAT_LICENSE, CAT_LOGO, CAT_NAME, CAT_ONTOLOGIES,
                   CAT_OWNER, CAT_PACKAGE_DISTRIBUTION, CAT_PROGRAMMING_LANGUAGES, CAT_README_URL,
                   CAT_RELATED_DOCUMENTATION, CAT_RELEASES, CAT_RUN,
@@ -134,6 +134,8 @@ PROP_TAG = "tag"
 PROP_URL = "url"
 PROP_ZIPBALL_URL = "zipball_url"
 PROP_TARBALL_URL = "tarball_url"
+# Publications
+PROP_TITLE = "title"
 
 # Format:
 FORMAT_BIB = "bibtex"
@@ -212,8 +214,7 @@ release_crosswalk_table = {
 # TO DO: Assess run and download.
 categories_files_header = [CAT_INSTALLATION, CAT_CITATION, CAT_ACKNOWLEDGEMENT, "run", "download", CAT_REQUIREMENTS,
                            CAT_CONTACT, CAT_DESCRIPTION, CAT_CONTRIBUTORS, CAT_DOCUMENTATION, CAT_LICENSE, CAT_USAGE,
-                           CAT_FAQ, CAT_SUPPORT, CAT_IDENTIFIER, CAT_HAS_EXECUTABLE_NOTEBOOK, CAT_HAS_BUILD_FILE,
-                           CAT_EXECUTABLE_EXAMPLE]
+                           CAT_FAQ, CAT_SUPPORT, CAT_IDENTIFIER, CAT_HAS_BUILD_FILE, CAT_EXECUTABLE_EXAMPLE]
 
 MAPPING_CONFIG = """
                     [DataSource1]
